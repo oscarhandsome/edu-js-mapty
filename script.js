@@ -2,7 +2,7 @@
 
 class Workout {
   date = new Date();
-  id = (Date.now() + '').slice(-10);
+  id = (Date.now() + Math.random() + '').replace('.', '').slice(-10);
   clicks = 0;
 
   constructor(coords, distance, duration) {
@@ -415,8 +415,7 @@ class App {
           [...record.coords],
           record.distance,
           record.duration,
-          record.cadence,
-          record.id
+          record.cadence
         );
       }
       if (record.type === 'cycling') {
@@ -424,11 +423,11 @@ class App {
           [...record.coords],
           record.distance,
           record.duration,
-          record.elevationGain,
-          record.id
+          record.elevationGain
         );
       }
     });
+    console.log(dataRebuildedToObjects);
 
     this.#workouts = dataRebuildedToObjects;
 
@@ -451,7 +450,6 @@ class App {
     const workout = this.#workouts.find(
       work => work.id === workoutEl.dataset.id
     );
-    console.log(workout);
 
     this.#workoutEditing = workout;
 
