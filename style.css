@@ -262,3 +262,69 @@ a:visited {
   opacity: 0;
   transition: opacity 2s;
 }
+
+.error {
+  position: absolute;
+  z-index: 1;
+  top: 3rem;
+  left: 3rem;
+  display: block;
+  padding: 1rem 2rem;
+  font-size: 1.8rem;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 1rem;
+  color: red;
+  transition: all 200ms ease-in;
+  opacity: 0;
+}
+
+.confirm {
+  position: absolute;
+  z-index: 1;
+  top: 3rem;
+  left: 3rem;
+  flex-basis: 50rem;
+  padding: 3rem 5rem 4rem 5rem;
+
+  font-size: 1.8rem;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 1rem;
+  color: red;
+  transition: all 200ms ease-in;
+  transform: translateX(-30rem);
+  opacity: 0;
+}
+.confirm.active {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: space-between;
+}
+
+.confirm__btn {
+  flex-grow: 1;
+  margin-top: 1rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 5px;
+  outline: none;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.confirm__btn_yes {
+  margin-right: 1rem;
+}
+
+.confirm__btn_yes:hover,
+.confirm__btn_yes:active {
+  background-color: var(--color-brand--2);
+}
+
+.confirm__btn_no:hover,
+.confirm__btn:active {
+  background-color: rgb(255, 0, 0);
+}

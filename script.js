@@ -75,6 +75,10 @@ const btnEdit = document.querySelector('.btn__edit');
 const btnDelete = document.querySelector('.btn__delete');
 const btnDeleteAll = document.querySelector('.btn__delete_all');
 const btnSort = document.querySelector('.btn--sort');
+const error = document.querySelector('.error');
+const confirmWindow = document.querySelector('.confirm');
+const confirmYes = document.querySelector('.confirm__btn_yes');
+const confirmNo = document.querySelector('.confirm__btn_no');
 
 class App {
   #map;
@@ -83,6 +87,7 @@ class App {
   #workouts = [];
   #workoutEditing;
   #currentWorkoutType = 'running';
+  #workoutDeleting;
 
   constructor() {
     // Get user's positions
@@ -97,6 +102,7 @@ class App {
     containerWorkouts.addEventListener('click', this._moveToPopup.bind(this));
     btnDeleteAll.addEventListener('click', this._deleteAllWorkouts.bind(this));
     btnSort.addEventListener('change', this._sortBy.bind(this));
+    confirmWindow.addEventListener('click', this._checkAnswer.bind(this));
   }
 
   _getPosititon() {
@@ -105,6 +111,7 @@ class App {
         this._loadMap.bind(this),
         function () {
           console.log('Could not get your location');
+          this._renderError('Could not get your location');
         }
       );
     }
@@ -174,8 +181,6 @@ class App {
       const [lat, lng] = [...this.#workoutEditing.coords];
       let workout;
 
-      console.log(type);
-
       const index = this.#workouts.findIndex(
         workout => workout.id === this.#workoutEditing.id
       );
@@ -221,8 +226,10 @@ class App {
         // !Number.isFinite(cadence)
         !validInputs(distance, duration, cadence) ||
         !allPositive(distance, duration, cadence)
-      )
-        return alert('Inputs have to be positive numbers!');
+      ) {
+        this._renderError('Inputs have to be positive numbers!');
+        return;
+      }
 
       workout = new Running([lat, lng], distance, duration, cadence);
     }
@@ -234,14 +241,18 @@ class App {
       if (
         !validInputs(distance, duration, elevaton) ||
         !allPositive(distance, duration)
-      )
-        return alert('Inputs have to be positive numbers!');
+      ) {
+        this._renderError('Inputs have to be positive numbers!');
+        return;
+      }
 
       workout = new Cycling([lat, lng], distance, duration, elevaton);
     }
 
     // Add new object to workout array
     this.#workouts.push(workout);
+
+    console.log(workout);
 
     // Render workout on map as marker
     this._renderWorkoutMarker(workout);
@@ -353,6 +364,22 @@ class App {
     }
   }
 
+  _renderError(errorMessage) {
+    const html = `
+      <div class="error-message">${errorMessage}</div>
+    `;
+
+    error.style.opacity = 1;
+    error.insertAdjacentHTML('afterbegin', html);
+
+    setTimeout(() => {
+      error.style.opacity = 0;
+    }, 3000);
+    setTimeout(() => {
+      error.innerHTML = '';
+    }, 3200);
+  }
+
   _moveToPopup(e) {
     const workoutEl = e.target.closest('.workout');
     const workoutEledit = e.target.closest('.btn__edit');
@@ -380,10 +407,30 @@ class App {
 
   _getLocalStorage() {
     const data = JSON.parse(localStorage.getItem('workouts'));
-
     if (!data) return;
 
-    this.#workouts = data;
+    const dataRebuildedToObjects = data.map(record => {
+      if (record.type === 'running') {
+        return new Running(
+          [...record.coords],
+          record.distance,
+          record.duration,
+          record.cadence,
+          record.id
+        );
+      }
+      if (record.type === 'cycling') {
+        return new Cycling(
+          [...record.coords],
+          record.distance,
+          record.duration,
+          record.elevationGain,
+          record.id
+        );
+      }
+    });
+
+    this.#workouts = dataRebuildedToObjects;
 
     this.#workouts.forEach(work => {
       this._renderWorkout(work);
@@ -404,6 +451,7 @@ class App {
     const workout = this.#workouts.find(
       work => work.id === workoutEl.dataset.id
     );
+    console.log(workout);
 
     this.#workoutEditing = workout;
 
@@ -425,34 +473,15 @@ class App {
     e.preventDefault();
     e.stopPropagation();
 
-    let agree = prompt('Are you sure? Y or N');
+    this.#workoutDeleting = e.target.closest('.workout');
+    if (!this.#workoutDeleting) return;
 
-    if (agree === 'Y' || agree === 'y') {
-      const workoutEl = e.target.closest('.workout');
-
-      if (!workoutEl) return;
-
-      const index = this.#workouts.findIndex(
-        workout => workout.id === workoutEl.dataset.id
-      );
-
-      // remove Workout if it's edited
-      this._removeFromHTMLWorkout(workoutEl.dataset.id);
-
-      this.#workouts.splice(index, 1);
-
-      // Set local storage to all workouts
-      this._setLocalStorage();
-
-      // Show del btn
-      this._showDeleteAllBtn();
-
-      return;
-    }
+    this._toggeleConfirmWindow();
   }
+
   _deleteAllWorkouts(e) {
     e.preventDefault();
-    console.log(`Delete all workouts clicked! 💋`);
+
     let agree = prompt('Are you sure? Yes or No');
 
     if (agree === 'Yes' || agree === 'yes') {
@@ -463,14 +492,58 @@ class App {
     }
   }
 
+  _toggeleConfirmWindow() {
+    confirmWindow.classList.toggle('active');
+  }
+
+  _checkAnswer(e) {
+    const result = new Promise((resolve, reject) => {
+      if (e.target.innerHTML === 'Yes') {
+        resolve('Yes');
+      } else {
+        reject(new Error('No!'));
+      }
+    });
+
+    result
+      .then(res => {
+        const index = this.#workouts.findIndex(
+          workout => workout.id === this.#workoutDeleting.dataset.id
+        );
+
+        // remove Workout if it's edited
+        this._removeFromHTMLWorkout(this.#workoutDeleting.dataset.id);
+
+        this.#workouts.splice(index, 1);
+
+        this.#workoutDeleting = null;
+
+        this._renderError('Workout successfully deleted!');
+
+        // Set local storage to all workouts
+        this._setLocalStorage();
+
+        // Show del btn
+        this._showDeleteAllBtn();
+
+        return;
+      })
+      .catch(err => {
+        this.#workoutDeleting = null;
+        return err;
+      })
+      .finally(() =>
+        // hide confrim window
+        this._toggeleConfirmWindow()
+      );
+  }
+
   _sortBy(e) {
     const selectedValue = e.target.selectedOptions[0].value;
 
-    console.log(selectedValue);
     const workoutsSorted = this.#workouts
       .slice()
       .sort((a, b) => a[selectedValue] - b[selectedValue]);
-    console.log(workoutsSorted);
 
     document.querySelectorAll('.workout').forEach(el => el.remove());
 
